@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafeNet: analysis history</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 3l11 4v8c0 7-5 12-11 14C10 27 5 22 5 15V7z' fill='%230e6f78'/><path d='M11 16l4 4 7-8' stroke='white' stroke-width='3' fill='none'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef2f1;--panel:#fbfdfc;--ink:#13262b;--muted:#566b70;--line:#cfdad8;--brand:#0e6f78;--brand-ink:#fff;--low:#1b7f46;--med:#9a6200;--high:#c0303b;--low-bg:#e2f3e8;--med-bg:#fbefd2;--high-bg:#fae0e2;
+--head:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;--body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1a1d;--panel:#152428;--ink:#e6f0ef;--muted:#9bb1b4;--line:#27393d;--brand:#4fc3cc;--brand-ink:#06282b;--low:#4cc47e;--med:#e2a43a;--high:#ff7a85;--low-bg:#12301f;--med-bg:#33260c;--high-bg:#3a1a1e}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--body)}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}a{color:var(--brand)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--line);background:var(--panel)}header .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{font:700 1.25rem var(--head);text-decoration:none;color:var(--ink)}h1{font:700 2rem/1.1 var(--head);margin:30px 0 4px}.sub{color:var(--muted);margin:0 0 22px}
+.stats{display:flex;flex-wrap:wrap;gap:34px;margin-bottom:22px}.stats b{display:block;font:700 2rem/1 var(--head)}.stats span{color:var(--muted);font-size:.9rem}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+input,select,button{font:inherit;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 12px}button{cursor:pointer}
+.btn{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}input{min-width:220px;flex:1}
+.tw{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:720px}th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;font-size:.88rem;color:var(--muted)}tr:last-child td{border-bottom:0}td.in{max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b{display:inline-block;font-weight:600;font-size:.82rem;padding:2px 9px;border-radius:5px}.LOW{background:var(--low-bg);color:var(--low)}.MEDIUM{background:var(--med-bg);color:var(--med)}.HIGH{background:var(--high-bg);color:var(--high)}
+.pg{display:flex;gap:10px;align-items:center;margin:14px 0 50px;color:var(--muted)}
+.msg{padding:18px;border:1px solid var(--line);border-radius:10px;background:var(--panel);margin-top:10px}.hidden{display:none!important}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);max-width:640px;width:calc(100% - 32px);padding:22px}dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{font:700 1.4rem var(--head);margin:0 0 10px}dl{margin:0}dt{font-weight:600;margin-top:12px}dd{margin:2px 0 0;white-space:pre-wrap;word-break:break-word;color:var(--muted)}
+</style>
+</head>
+<body>
+<header><div class="wrap"><a class="logo" href="/">SafeNet</a><a href="/">Back to checker</a></div></header>
+<main class="wrap">
+  <h1>Analysis history</h1><p class="sub">Every check made with SafeNet, newest first.</p>
+  <div id="auth" class="msg hidden"><b id="authMsg"></b>
+    <div class="bar" style="margin:12px 0 0"><input id="tok" type="password" placeholder="Admin token" autocomplete="off"><button class="btn" id="tokGo">Unlock</button></div></div>
+  <div id="main" class="hidden">
+    <div class="stats" id="stats"></div>
+    <div class="bar">
+      <select id="lvl" aria-label="Filter by risk level"><option value="">All risk levels</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option><option value="UNKNOWN">Not enough information</option></select>
+      <input id="q" placeholder="Search messages and links" aria-label="Search">
+      <button id="exp">Export CSV</button>
+    </div>
+    <div class="tw"><table><thead><tr><th>When (UTC)</th><th>Risk</th><th>Score</th><th>Threat</th><th>Input</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+    <div id="none" class="msg hidden">No analyses match. Run a check on the main page and it will appear here.</div>
+    <div class="pg"><button id="prev">Previous</button><span id="pos"></span><button id="next">Next</button></div>
+  </div>
+</main>
+<dialog id="dlg"><h2>Analysis details</h2><dl id="dl"></dl><div class="bar" style="margin:18px 0 0"><button id="close">Close</button></div></dialog>
+<script>
+const $=id=>document.getElementById(id),LIM=20;let off=0,total=0;
+const tok=()=>sessionStorage.getItem("sn_tok")||"";
+const hdr=()=>tok()?{"X-Admin-Token":tok()}:{};
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+async function api(path,opt={}){const r=await fetch(path,{...opt,headers:{...hdr(),...(opt.headers||{})}});
+  if(r.status===401||r.status===403){const d=await r.json().catch(()=>({}));$("main").classList.add("hidden");$("auth").classList.remove("hidden");
+    $("authMsg").textContent=d.detail||"Access denied.";$("tok").classList.toggle("hidden",r.status===403);$("tokGo").classList.toggle("hidden",r.status===403);throw new Error("auth")}
+  if(!r.ok){const d=await r.json().catch(()=>({}));$("main").classList.add("hidden");$("auth").classList.remove("hidden");$("authMsg").textContent=d.detail||"Request failed.";$("tok").classList.add("hidden");$("tokGo").classList.add("hidden");throw new Error("fail")}$("auth").classList.add("hidden");$("main").classList.remove("hidden");return r}
+async function stats(){const s=await (await api("/history/summary")).json(),b=$("stats");b.textContent="";
+  [[s.total,"checks stored"],[s.by_level.HIGH||0,"high risk"],[s.by_level.MEDIUM||0,"medium risk"],[s.by_level.LOW||0,"low risk"],[s.avg_risk_score==null?"n/a":s.avg_risk_score,"average score"]]
+   .forEach(([n,l])=>{const d=el("div");d.append(el("b",null,n),el("span",null,l));b.appendChild(d)})}
+async function load(){
+  const p=new URLSearchParams({limit:LIM,offset:off});if($("lvl").value)p.set("level",$("lvl").value);if($("q").value.trim())p.set("q",$("q").value.trim());
+  const d=await (await api("/history?"+p)).json();total=d.total;const tb=$("rows");tb.textContent="";
+  $("none").classList.toggle("hidden",d.items.length>0);
+  d.items.forEach(i=>{const tr=el("tr");tr.append(el("td",null,i.created_at.replace("T"," ").replace("+00:00","")));
+    const t=el("td");t.appendChild(el("span","b "+i.risk_level,i.risk_level.charAt(0)+i.risk_level.slice(1).toLowerCase()));tr.appendChild(t);
+    tr.append(el("td",null,Math.round(i.risk_score)),el("td",null,i.threat_type),el("td","in",i.input_text||i.input_url||i.input_email||""));
+    const a=el("td"),v=el("button",null,"View"),x=el("button",null,"Delete");v.onclick=()=>view(i.id);x.onclick=()=>del(i.id);a.append(v," ",x);tr.appendChild(a);tb.appendChild(tr)});
+  $("pos").textContent=total?`${off+1}-${Math.min(off+LIM,total)} of ${total}`:"0 results";$("prev").disabled=off===0;$("next").disabled=off+LIM>=total}
+async function view(id){const i=await (await api("/history/"+id)).json(),dl=$("dl");dl.textContent="";
+  const add=(k,v)=>{if(v==null||v==="")return;dl.append(el("dt",null,k),el("dd",null,v))};
+  add("When (UTC)",i.created_at);add("Risk",`${i.risk_level} (${Math.round(i.risk_score)}/100)`);add("Threat type",i.threat_type);add("Message",i.input_text);add("Link entered",i.input_url);add("Sender email",i.input_email);
+  const g=i.signals||{},pc=v=>v==null?null:Math.round(v*100)+"%";add("Message signal",pc(g.message));add("Link signal",pc(g.url));add("Sender signal",pc(g.email));
+  add("Advice",i.recommendation);add("Evidence",(i.evidence||[]).map(e=>"["+({link:"Link",message:"Message",sender:"Sender"}[e.source]||e.source)+"] "+e.label+(e.safe?" (reassuring)":"")).join("\n")||i.reasons.join("\n"));add("Links checked",i.urls_analyzed.map(u=>u.url+"  ("+u.status+", risk "+Math.round(u.probability*100)+"%)").join("\n"));
+  $("dlg").showModal()}
+async function del(id){if(!confirm("Delete this record permanently?"))return;await api("/history/"+id,{method:"DELETE"});await Promise.all([stats(),load()])}
+$("exp").onclick=async()=>{const b=await (await api("/history/export.csv")).blob(),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="safenet_history.csv";a.click();URL.revokeObjectURL(a.href)};
+$("close").onclick=()=>$("dlg").close();
+$("prev").onclick=()=>{off=Math.max(0,off-LIM);load()};$("next").onclick=()=>{off+=LIM;load()};
+let tm;const re=()=>{off=0;load().catch(()=>{})};$("lvl").onchange=re;$("q").oninput=()=>{clearTimeout(tm);tm=setTimeout(re,300)};
+$("tokGo").onclick=()=>{sessionStorage.setItem("sn_tok",$("tok").value);init()};
+function init(){Promise.all([stats(),load()]).catch(()=>{})}init();
+</script>
+</body>
+</html>

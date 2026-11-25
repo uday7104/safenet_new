@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafeNet: check a message or link for scams</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 3l11 4v8c0 7-5 12-11 14C10 27 5 22 5 15V7z' fill='%230e6f78'/><path d='M11 16l4 4 7-8' stroke='white' stroke-width='3' fill='none'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef2f1;--panel:#fbfdfc;--ink:#13262b;--muted:#566b70;--line:#cfdad8;--brand:#0e6f78;--brand-ink:#fff;
+--low:#1b7f46;--med:#9a6200;--high:#c0303b;--low-bg:#e2f3e8;--med-bg:#fbefd2;--high-bg:#fae0e2;--shadow:0 1px 2px rgba(19,38,43,.06),0 8px 24px -12px rgba(19,38,43,.18);
+--head:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;--body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1a1d;--panel:#152428;--ink:#e6f0ef;--muted:#9bb1b4;--line:#27393d;--brand:#4fc3cc;--brand-ink:#06282b;
+--low:#4cc47e;--med:#e2a43a;--high:#ff7a85;--low-bg:#12301f;--med-bg:#33260c;--high-bg:#3a1a1e;--shadow:0 8px 24px -12px #000}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--body)}
+a{color:var(--brand)}:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--line);background:var(--panel)}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{display:flex;align-items:center;gap:10px;font:700 1.25rem var(--head);text-decoration:none;color:var(--ink)}
+nav{display:flex;gap:22px}nav a{color:var(--muted);text-decoration:none;font-weight:500;font-size:.95rem}nav a:hover{color:var(--ink)}
+@media(max-width:620px){nav{display:none}}
+.hero{padding:44px 0 26px}.hero h1{font:700 clamp(2rem,4.6vw,3.2rem)/1.08 var(--head);margin:0 0 12px;max-width:21ch;letter-spacing:-.02em}
+.hero p{margin:0;color:var(--muted);max-width:56ch;font-size:1.1rem}
+.bench{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:22px;align-items:start;padding-bottom:56px}
+@media(max-width:900px){.bench{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:22px}
+label{display:block;font-weight:600;margin:0 0 6px}.hint{font-weight:400;color:var(--muted)}
+textarea,input{width:100%;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:11px 12px}
+textarea{min-height:150px;resize:vertical}.gap{margin-top:16px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--brand);color:var(--brand-ink);border:0;border-radius:8px;padding:12px 22px;font-weight:600}
+.btn:disabled{opacity:.6;cursor:wait}.btn.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.ex{margin-top:20px;padding-top:16px;border-top:1px dashed var(--line)}.ex b{font-weight:600;font-size:.9rem}
+.chip{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:99px;padding:6px 13px;font-size:.88rem;margin:8px 8px 0 0}
+.chip:hover{border-color:var(--brand);color:var(--brand)}
+#hist{list-style:none;margin:8px 0 0;padding:0}#hist li button{width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:9px 2px;display:flex;gap:10px;color:inherit;align-items:center}
+#hist .dot{width:10px;height:10px;border-radius:50%;flex:none}#hist .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:.9rem}#hist .s{font-weight:600;font-size:.85rem}
+.empty{color:var(--muted)}.empty h2{font:700 1.3rem var(--head);color:var(--ink);margin:0 0 8px}.empty ul{padding-left:20px;margin:10px 0 0}.empty li{margin:5px 0}
+#err{color:var(--high);font-weight:500;margin-top:12px}.hidden{display:none!important}
+#result[data-level=LOW]{--lv:var(--low);--lvbg:var(--low-bg)}#result[data-level=MEDIUM]{--lv:var(--med);--lvbg:var(--med-bg)}#result[data-level=HIGH]{--lv:var(--high);--lvbg:var(--high-bg)}
+.verdict{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.dial{width:190px;flex:none;position:relative}.dial svg{display:block;width:100%}
+.dial .arc{fill:none;stroke-width:14;stroke-linecap:round}.dial .bg{stroke:var(--line)}
+.dial .fg{stroke:var(--lv);stroke-dasharray:251.3;stroke-dashoffset:251.3;transition:stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1)}
+.dial .num{position:absolute;left:0;right:0;bottom:2px;text-align:center;font:700 2.2rem/1 var(--head)}.dial .num small{font-size:.9rem;color:var(--muted);font-weight:500}
+.vt h2{margin:0;font:700 1.9rem/1.1 var(--head);color:var(--lv)}.vt p{margin:6px 0 0;color:var(--muted)}
+.tag{display:inline-block;background:var(--lvbg);color:var(--lv);font-weight:600;font-size:.88rem;border-radius:6px;padding:3px 10px;margin-top:8px}
+.act{margin-top:20px;background:var(--lvbg);border-left:5px solid var(--lv);border-radius:4px 10px 10px 4px;padding:14px 16px}
+.act strong{font:700 1.1rem var(--head);color:var(--lv);display:block;margin-bottom:2px}
+h3{font:700 1.05rem var(--head);margin:26px 0 8px}
+.sig{display:grid;grid-template-columns:130px 1fr 48px;gap:10px;align-items:center;margin:6px 0;font-size:.93rem}
+.bar{height:9px;background:var(--line);border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--lv);transition:width .8s .1s}
+.sig span:last-child{text-align:right;font-weight:600}
+.msg{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px;line-height:1.85}
+mark{background:color-mix(in srgb,var(--mc) 24%,transparent);border-bottom:2px solid var(--mc);color:inherit;border-radius:2px;padding:1px 2px}
+.k-urgency{--mc:#d79a00}.k-cred{--mc:#d23b47}.k-money{--mc:#8a4fd0}.k-threat{--mc:#e0642a}.k-auth{--mc:#2f7be0}.k-link{--mc:#0e8f9a}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;font-size:.88rem}.legend span{display:flex;align-items:center;gap:6px}.legend i{width:12px;height:12px;border-radius:3px;background:var(--mc)}
+.legend em{font-style:normal;color:var(--muted)}
+.lk{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0}.lk code{font:500 .86rem ui-monospace,Consolas,monospace;word-break:break-all}
+.lk .hd{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.lk .pp{font-weight:600;white-space:nowrap}
+.lk ul{margin:8px 0 0;padding-left:20px;font-size:.92rem}.badge{background:var(--low-bg);color:var(--low);font-size:.8rem;font-weight:600;padding:2px 8px;border-radius:5px;margin-left:6px}
+.none{color:var(--muted)}
+#result[data-level=UNKNOWN]{--lv:var(--muted);--lvbg:var(--line)}
+.ev{list-style:none;margin:8px 0 0;padding:0}.ev li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);font-size:.93rem}
+.ev .sv{flex:none;width:10px;height:10px;border-radius:50%;margin-top:7px}.sv.hi{background:var(--high)}.sv.mid{background:var(--med)}.sv.lo{background:var(--muted)}.sv.ok{background:var(--low)}
+.ev .src{flex:none;width:62px;font-weight:600;font-size:.85rem;color:var(--muted);margin-top:1px}.ev .tg{color:var(--muted);font-size:.82rem;word-break:break-all}
+.badge.bad{background:var(--high-bg);color:var(--high)}.badge.unk{background:var(--line);color:var(--muted)}.k-pay{--mc:#b5517e}
+section.band{border-top:1px solid var(--line);padding:52px 0}.band h2{font:700 clamp(1.5rem,3vw,2rem)/1.15 var(--head);margin:0 0 8px;letter-spacing:-.01em}.band>.wrap>p{color:var(--muted);margin:0 0 26px;max-width:62ch}
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:0;counter-reset:s}
+@media(max-width:760px){.flow{grid-template-columns:1fr}}
+.flow div{padding:0 26px 0 0;position:relative}.flow div::before{counter-increment:s;content:counter(s);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font:700 1rem var(--head);margin-bottom:12px}
+.flow div::after{content:"";position:absolute;top:17px;left:44px;right:10px;height:2px;background:var(--line)}.flow div:last-child::after{display:none}
+@media(max-width:760px){.flow div::after{display:none}.flow div{padding-bottom:20px}}
+.flow h3{margin:0 0 4px}.flow p{margin:0;color:var(--muted);font-size:.95rem}
+.tips{display:grid;grid-template-columns:1fr 1fr;gap:6px 48px}@media(max-width:760px){.tips{grid-template-columns:1fr}}
+.tips div{padding:14px 0;border-bottom:1px solid var(--line)}.tips b{display:block;font-family:var(--head);font-size:1.05rem}.tips span{color:var(--muted);font-size:.95rem}
+.acc{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:30px}
+.acc .big{font:700 2.6rem/1 var(--head);color:var(--brand)}.acc p{margin:6px 0 0;font-size:.95rem}.acc .lab{font-weight:600;margin-top:4px}
+.note{margin-top:20px;font-size:.88rem;color:var(--muted);max-width:70ch}
+footer{border-top:1px solid var(--line);padding:26px 0;color:var(--muted);font-size:.88rem;background:var(--panel)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <a class="logo" href="#top"><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3l11 4v8c0 7-5 12-11 14C10 27 5 22 5 15V7z" fill="var(--brand)"/><path d="M11 16l4 4 7-8" stroke="var(--brand-ink)" stroke-width="3" fill="none"/></svg>SafeNet</a>
+  <nav aria-label="Sections"><a href="#check">Check</a><a href="#how">How it works</a><a href="#safe">Stay safe</a><a href="#data">Database</a><a href="/static/history.html">History</a></nav>
+</div></header>
+
+<main id="top">
+<div class="wrap">
+  <div class="hero"><h1>Check a message or link before you act on it.</h1>
+  <p>Paste anything that feels off: a text, an email or a link. SafeNet compares them with a database of known scams, trusted websites and warning signs, then tells you what to do next.</p></div>
+
+  <div class="bench" id="check">
+    <div class="panel">
+      <label for="text">Message or email text <span class="hint">(optional)</span></label>
+      <textarea id="text" maxlength="5000" placeholder="Paste the text or email here"></textarea>
+      <div class="gap"><label for="url">Link <span class="hint">(optional, links inside the message are checked automatically)</span></label>
+      <input id="url" placeholder="example.com/login" autocomplete="off" spellcheck="false"></div>
+      <div class="gap"><label for="email">Sender email <span class="hint">(optional)</span></label>
+      <input id="email" type="text" inputmode="email" placeholder="support@example.com" autocomplete="off" spellcheck="false"></div>
+      <div class="row"><button class="btn" id="go">Check for scams</button><button class="btn sec" id="clear" type="button">Clear</button></div>
+      <div id="err" class="hidden" role="alert"></div>
+      <div class="ex"><b>No message handy? Try an example</b><div id="examples"></div></div>
+      <div class="ex hidden" id="histBox"><b>Checked in this tab</b><ul id="hist"></ul></div>
+    </div>
+
+    <div class="panel" aria-live="polite" id="out">
+      <div class="empty" id="empty"><h2>Your result appears here</h2>
+        <p>You will get a risk score, the likely type of threat and a clear next step. You will also see:</p>
+        <ul><li>your message with the suspicious phrases marked</li><li>a breakdown of every link, with the reasons it looks safe or risky</li></ul></div>
+      <div id="result" class="hidden">
+        <div class="verdict">
+          <div class="dial"><svg viewBox="0 0 200 110" role="img" aria-label="Risk dial"><path class="arc bg" d="M20 100A80 80 0 0 1 180 100"/><path class="arc fg" id="arc" d="M20 100A80 80 0 0 1 180 100"/></svg><div class="num"><span id="score">0</span><small>/100</small></div></div>
+          <div class="vt"><h2 id="lvl"></h2><p id="lvlsub"></p><span class="tag" id="type"></span></div>
+        </div>
+        <div class="act"><strong id="actw"></strong><span id="actt"></span></div>
+        <h3>What the checks found</h3>
+        <div class="sig"><span>Message wording</span><div class="bar"><i id="b1"></i></div><span id="p1"></span></div>
+        <div class="sig"><span>Links</span><div class="bar"><i id="b2"></i></div><span id="p2"></span></div>
+        <div class="sig"><span>Sender email</span><div class="bar"><i id="b3"></i></div><span id="p3"></span></div>
+        <div id="evBox"><h3>Why this score</h3><p class="none" style="margin:0 0 4px">Red and amber items raised the score. Green items are reassuring.</p>
+          <ul class="ev" id="ev"></ul><p class="none hidden" id="evNone"></p><p class="none hidden" id="closest"></p></div>
+        <div id="msgBox"><h3>Your message, annotated</h3><div class="msg" id="msg"></div><div class="legend" id="legend"></div></div>
+        <div id="lkBox"><h3>Links inspected</h3><div id="links"></div></div>
+        <div class="row"><button class="btn sec" id="copy" type="button">Copy report</button><span id="copied" class="hint"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="band" id="how"><div class="wrap"><h2>How SafeNet decides</h2><p>SafeNet does not guess. It looks each piece up in its database and adds up what it finds.</p>
+  <div class="flow">
+    <div><h3>Look it up</h3><p>The link, sender and message are compared with known phishing links, blocked senders, trusted websites and known scam messages.</p></div>
+    <div><h3>Check for warning signs</h3><p>Scam wording, look-alike brand names, odd website endings and links that do not match the brand each add to the risk.</p></div>
+    <div><h3>Add it up and advise</h3><p>The evidence is combined into a 0 to 100 score with the exact reasons, and SafeNet says what to do next.</p></div>
+  </div></div></section>
+
+<section class="band" id="safe"><div class="wrap"><h2>Habits that stop most scams</h2><p>No tool is perfect. These rules protect you even when a message looks convincing.</p>
+  <div class="tips">
+    <div><b>Never share codes or passwords</b><span>Banks and delivery companies do not ask for your OTP, PIN or password by message or call.</span></div>
+    <div><b>Read the real domain</b><span>The part just before the first single slash decides where you land. paypal.com.login-help.xyz is not PayPal.</span></div>
+    <div><b>Treat urgency as a warning</b><span>"Within 24 hours" and "account blocked" are designed to stop you thinking.</span></div>
+    <div><b>Open the app yourself</b><span>Type the address or use the official app instead of tapping a link in a message.</span></div>
+    <div><b>Verify through another channel</b><span>Call the number printed on your card or the company's own website.</span></div>
+    <div><b>Report and delete</b><span>Tell your bank or your country's cybercrime portal so others are protected.</span></div>
+  </div></div></section>
+
+<section class="band" id="data"><div class="wrap"><h2>What SafeNet checks against</h2><p>Every result comes from matches in these records, not from guesses. When a new scam is reported it is added to the database and caught from then on.</p>
+  <div class="acc" id="accGrid"></div><p class="note" id="dbsrc"></p></div></section>
+</main>
+
+<footer><div class="wrap">SafeNet is a decision-support prototype. It does not replace your bank's or employer's security tools. Each check (your message, link and the result) is saved in the SafeNet database so it can be reviewed later, so do not paste passwords or private details.</div></footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const LV={LOW:["Low risk","No strong warning signs matched."],MEDIUM:["Be careful","Some warning signs matched."],HIGH:["High risk","This matches known scam patterns."],UNKNOWN:["Not enough information","SafeNet needs more to compare."]};
+const CAT={"Urgency":"urgency","Credential request":"cred","Money / reward lure":"money","Threat / fear":"threat","Authority impersonation":"auth","Payment request":"pay"};
+const CATTXT={"Urgency":"Pressure to act fast","Credential request":"Asks for secrets or logins","Money / reward lure":"Money or prize bait","Threat / fear":"Threat or scare","Authority impersonation":"Names a trusted brand","Payment request":"Asks for a fee or transfer"};
+const SRC={link:"Link",message:"Message",sender:"Sender"};
+const EX=[
+ ["Bank alert","URGENT: Your HDFC Bank account has been suspended. Verify your password immediately at http://hdfc-secure-login.top/verify/index.php?id=4821","",""],
+ ["Prize win","Congratulations! You have won a $1000 gift card. Claim your prize today only.","bit.ly/3xYzAb",""],
+ ["Fake sender","Your package is held at customs. Pay the customs fee today to release it.","","dhl-support@yahoo.com"],
+ ["Normal message","Hey, are we still meeting for lunch at 1pm tomorrow? I booked the table near the window.","",""],
+ ["Shipping update","Your Amazon order has shipped. Track it at https://www.amazon.com/orders","",""],
+ ["Link only","","http://192.168.44.12/secure/login.php",""]];
+const hist=[];let last=null;
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+const pct=v=>v==null?"n/a":Math.round(v*100)+"%";
+function setInputs(t,u,e){$("text").value=t;$("url").value=u;$("email").value=e}
+EX.forEach(([n,t,u,e])=>{const b=el("button","chip",n);b.type="button";b.onclick=()=>{setInputs(t,u,e);run()};$("examples").appendChild(b)});
+
+function annotate(msg,d){
+  const map={};Object.entries(d.cues||{}).forEach(([c,ws])=>ws.forEach(w=>map[w.toLowerCase()]=c));
+  d.urls_analyzed.forEach(u=>{if(msg.includes(u.url))map[u.url.toLowerCase()]="link"});
+  const terms=Object.keys(map).sort((a,b)=>b.length-a.length).map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));
+  const box=$("msg");box.textContent="";
+  if(!terms.length){box.textContent=msg;return[]}
+  const parts=msg.split(new RegExp("("+terms.join("|")+")","i")),used=new Set();
+  parts.forEach(p=>{const c=map[p.toLowerCase()];if(c){box.appendChild(el("mark","k-"+(CAT[c]||"link"),p));used.add(c)}else box.appendChild(document.createTextNode(p))});
+  return[...used];
+}
+function render(d,msg){
+  $("empty").classList.add("hidden");$("result").classList.remove("hidden");$("result").dataset.level=d.risk_level;
+  const lv=LV[d.risk_level]||LV.UNKNOWN;$("lvl").textContent=lv[0];$("lvlsub").textContent=lv[1];
+  $("type").textContent=d.risk_level==="UNKNOWN"?"No verdict":(d.threat_type==="None detected"?"No threat type detected":"Likely: "+d.threat_type);
+  const sc=d.risk_score==null?0:d.risk_score;$("score").textContent=d.risk_score==null?"–":Math.round(sc);
+  const arc=$("arc");arc.style.transition="none";arc.style.strokeDashoffset=251.3;arc.getBoundingClientRect();arc.style.transition="";
+  requestAnimationFrame(()=>arc.style.strokeDashoffset=251.3*(1-sc/100));
+  const m=d.recommendation.match(/^(BLOCK|VERIFY):\s*(.*)$/);
+  if(m){$("actw").textContent=m[1].charAt(0)+m[1].slice(1).toLowerCase();$("actt").textContent=m[2]}
+  else{$("actw").textContent=d.risk_level==="LOW"?"Looks safe":"Add more detail";$("actt").textContent=d.recommendation.replace(/^Looks safe, but stay cautious:\s*/,"Stay cautious: ")}
+  const s=d.signals;[["1",s.message],["2",s.url],["3",s.email]].forEach(([i,v])=>{$("b"+i).style.width=(v==null?0:v*100)+"%";$("p"+i).textContent=pct(v)});
+  const ev=$("ev");ev.textContent="";
+  d.evidence.forEach(e=>{const li=el("li"),body=el("div");
+    body.appendChild(document.createTextNode(e.label));if(e.target&&e.source!=="message")body.appendChild(el("div","tg",e.target));
+    li.append(el("span","sv "+(e.safe?"ok":e.weight>=.6?"hi":e.weight>=.3?"mid":"lo")),el("span","src",SRC[e.source]||e.source),body);ev.appendChild(li)});
+  $("evNone").textContent=d.risk_level==="UNKNOWN"?(d.reasons[0]||""):"Nothing matched in the database and no warning signs were found.";
+  $("evNone").classList.toggle("hidden",d.evidence.length>0);
+  const cs=(d.matches||{}).scam,cl=$("closest");cl.classList.toggle("hidden",!cs);
+  if(cs)cl.textContent="Closest known scam message ("+Math.round(cs.similarity*100)+"% similar): \u201c"+cs.text+"\u201d";
+  const L=$("links");L.textContent="";$("lkBox").classList.toggle("hidden",!d.urls_analyzed.length);
+  d.urls_analyzed.forEach(u=>{const c=el("div","lk"),h=el("div","hd"),l=el("div");l.appendChild(el("code",null,u.url));
+    const bd={listed:["Listed as phishing","badge bad"],trusted:["Popular site","badge"],unknown:["Not in database","badge unk"]}[u.status]||["","badge unk"];
+    l.appendChild(el("span",bd[1],bd[0]));h.appendChild(l);h.appendChild(el("span","pp","Risk "+pct(u.probability)));c.appendChild(h);
+    const ul=el("ul");u.evidence.forEach(f=>ul.appendChild(el("li",null,f)));c.appendChild(ul);L.appendChild(c)});
+  const hasMsg=!!msg.trim();$("msgBox").classList.toggle("hidden",!hasMsg);
+  if(hasMsg){const used=annotate(msg,d),lg=$("legend");lg.textContent="";
+    used.forEach(c=>{const sp=el("span","k-"+(CAT[c]||"link"));sp.appendChild(el("i"));sp.appendChild(document.createTextNode(c==="link"?"Link":c));if(CATTXT[c])sp.appendChild(el("em",null," ("+CATTXT[c].toLowerCase()+")"));lg.appendChild(sp)});
+    if(!used.length)lg.appendChild(el("span","none","No suspicious phrases found in the wording."))}
+}
+async function run(){
+  const text=$("text").value,url=$("url").value,email=$("email").value;$("err").classList.add("hidden");
+  if(!text.trim()&&!url.trim()&&!email.trim()){$("err").textContent="Paste a message, a link or a sender email first.";$("err").classList.remove("hidden");return}
+  const b=$("go");b.disabled=true;b.textContent="Checking...";
+  try{
+    const res=await fetch("/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,url,email})});
+    if(!res.ok)throw new Error((await res.json()).detail||"The check failed. Try again.");
+    const d=await res.json();last={d,text,url,email};render(d,text);
+    hist.unshift({text,url,email,level:d.risk_level,score:d.risk_score==null?null:Math.round(d.risk_score)});hist.splice(5);drawHist();
+    if(matchMedia("(max-width:900px)").matches)$("out").scrollIntoView({behavior:"smooth"});
+  }catch(e){$("err").textContent=e.message;$("err").classList.remove("hidden")}
+  b.disabled=false;b.textContent="Check for scams";
+}
+function drawHist(){
+  const ul=$("hist");ul.textContent="";$("histBox").classList.toggle("hidden",!hist.length);
+  const col={LOW:"var(--low)",MEDIUM:"var(--med)",HIGH:"var(--high)",UNKNOWN:"var(--muted)"};
+  hist.forEach(h=>{const li=el("li"),b=el("button");b.type="button";const dot=el("span","dot");dot.style.background=col[h.level];
+    b.append(dot,el("span","t",h.text||h.url||h.email),el("span","s",h.score==null?"n/a":h.score+"/100"));b.onclick=()=>{setInputs(h.text,h.url,h.email);run()};li.appendChild(b);ul.appendChild(li)});
+}
+$("go").onclick=run;
+$("text").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey))run()});
+$("clear").onclick=()=>{setInputs("","","");$("err").classList.add("hidden");$("result").classList.add("hidden");$("empty").classList.remove("hidden");$("text").focus()};
+$("copy").onclick=async()=>{if(!last)return;const{d,text,url,email}=last;
+  const rep="SafeNet report\nRisk: "+LV[d.risk_level][0]+(d.risk_score==null?"":" ("+Math.round(d.risk_score)+"/100)")+"\nThreat type: "+d.threat_type+"\nAdvice: "+d.recommendation+"\n"
+   +(text?"\nMessage: "+text+"\n":"")+(email?"\nSender: "+email+"\n":"")+(d.urls_analyzed.length?"\nLinks:\n"+d.urls_analyzed.map(u=>"- "+u.url+" (risk "+pct(u.probability)+")").join("\n")+"\n":"")
+   +(d.reasons.length?"\nWhy:\n"+d.reasons.map(r=>"- "+r).join("\n"):"");
+  try{await navigator.clipboard.writeText(rep);$("copied").textContent="Copied"}catch{$("copied").textContent="Copy is blocked in this browser"}setTimeout(()=>$("copied").textContent="",2500)};
+
+fetch("/stats").then(r=>r.json()).then(s=>{
+  if(!s.phrases)return;const g=$("accGrid");g.textContent="";
+  const add=(big,lab,txt)=>{const d=el("div");d.append(el("div","big",big),el("div","lab",lab),el("p",null,txt));g.appendChild(d)};
+  add(s.known_phishing_links==null?"n/a":s.known_phishing_links.toLocaleString(),"known phishing links","Exact links, websites and domains reported as phishing.");
+  add(s.trusted_domains.toLocaleString(),"trusted websites","The most popular sites. Matching one greatly lowers a link's risk.");
+  add(s.known_messages.toLocaleString(),"known messages","Scam and normal messages that new messages are compared with.");
+  add(s.phrases+" + "+s.brands,"phrases and brands","Scam wording patterns, and brands whose real websites SafeNet knows.");
+  $("dbsrc").textContent=s.source==="database"?"Connected to the MongoDB reference database.":"The database is not reachable, so SafeNet is using only its small built-in lists."}).catch(()=>{});
+</script>
+</body>
+</html>
