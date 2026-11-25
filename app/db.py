@@ -16,7 +16,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo import DESCENDING, MongoClient
 
-MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb+srv://udaysutar7104_db_user:TKHSFJcpNMZWuP3c@cluster0.2exsx68.mongodb.net/")
 MONGODB_DB = os.environ.get("MONGODB_DB", "safenet")
 COLLECTION = "analyses"
 
